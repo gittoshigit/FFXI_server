@@ -656,6 +656,66 @@ int32 CalculateEnspellDamage(CBattleEntity* PAttacker, CBattleEntity* PDefender,
         }
     }
 
+    // --------------------------
+    // Enspell % multiplier bucket
+    // --------------------------
+
+    // Total % mod on the attacker (armor + both weapons)
+    int32 totalPctMod = PAttacker->getMod(Mod::ENSPELL_DMG_PCT);
+
+    // Exclude the other weapon's % contribution, same pattern as flat +n above
+    int32 excludePct = 0;
+    int32 weaponPct  = 0;
+
+    if (PChar)
+    {
+        // pWeaponHit is the weapon that procced this add-effect (hand-specific)
+        if (pWeaponHit)
+        {
+            weaponPct = pWeaponHit->getModifier(Mod::ENSPELL_DMG_PCT);
+        }
+
+        constexpr SLOTTYPE slots[] = { SLOT_MAIN, SLOT_SUB };
+        for (SLOTTYPE slot : slots)
+        {
+            if (auto* eq = PChar->getEquip(slot); eq && eq != pWeaponHit)
+            {
+                excludePct += eq->getModifier(Mod::ENSPELL_DMG_PCT);
+            }
+        }
+    }
+
+    // pctApplicable includes: non-weapon % + this-hand weapon %
+    int32 pctApplicable = totalPctMod - excludePct;
+
+    // Split into non-weapon vs weapon
+    int32 nonWeaponPct = pctApplicable - weaponPct;
+    if (nonWeaponPct < 0)
+    {
+        nonWeaponPct = 0; // safety clamp, shouldn't happen unless data is weird
+    }
+
+    float mult = 1.0f;
+
+    // 1) all NON-weapon enspell dmg % (armor/etc)
+    mult += (float)nonWeaponPct / 100.0f;
+
+    // 2) Composure bonus: only RDM main, only Tier I/II elemental (Fire..Water)
+    if (PChar &&
+        PChar->GetMJob() == JOB_RDM &&
+        PAttacker->StatusEffectContainer->HasStatusEffect(EFFECT_COMPOSURE) &&
+        (Tier == 1 || Tier == 2) &&
+        (element >= 1 && element <= 6))
+    {
+        mult += 2.0f; // +200% => triple
+    }
+
+    // 3) This hand's weapon-only enspell dmg % (Crocea Mors Path C etc)
+    mult += (float)weaponPct / 100.0f;
+
+    // 4) Apply multiplier exactly once
+    damage = (int32)std::floor(damage * mult);
+
     // matching day 10% bonus, matching weather 10% or 25% for double weather
     float  dBonus  = 1.0;
     float  resist  = 1.0;
@@ -2022,7 +2082,11 @@ int32 TakePhysicalDamage(CBattleEntity* PAttacker, CBattleEntity* PDefender, PHY
         damage = -corrected;
     }
 
-    battleutils::ClaimMob(PDefender, PAttacker);
+    // Only claim a mob and if the allegiance is not PLAYER. This prevents mobs from calling ClaimMob on other mobs or themselves.
+    if (PDefender->objtype == TYPE_MOB && PDefender->allegiance != PAttacker->allegiance)
+    {
+        battleutils::ClaimMob(PDefender, PAttacker);
+    }
 
     if (damage > 0)
     {
@@ -3963,7 +4027,7 @@ bool HasNinjaTool(CBattleEntity* PEntity, CSpell* PSpell, bool ConsumeTool)
         {
             // Futae Takes 2 of Your Tools
             charutils::UpdateItem(PChar, LOC_INVENTORY, SlotID, -2);
-            PChar->pushPacket<GP_SERV_COMMAND_ITEM_SAME>();
+            PChar->pushPacket<GP_SERV_COMMAND_ITEM_SAME>(PChar);
         }
         else
         {
@@ -3979,7 +4043,7 @@ bool HasNinjaTool(CBattleEntity* PEntity, CSpell* PSpell, bool ConsumeTool)
             if (ConsumeTool && xirand::GetRandomNumber(100) > chance)
             {
                 charutils::UpdateItem(PChar, LOC_INVENTORY, SlotID, -1);
-                PChar->pushPacket<GP_SERV_COMMAND_ITEM_SAME>();
+                PChar->pushPacket<GP_SERV_COMMAND_ITEM_SAME>(PChar);
             }
         }
     }
@@ -4488,10 +4552,13 @@ void ClaimMob(CBattleEntity* PDefender, CBattleEntity* PAttacker, bool passing)
 {
     TracyZoneScoped;
 
-    if (PDefender == nullptr ||
-        (PDefender && PDefender->objtype != ENTITYTYPE::TYPE_MOB) ||                                                   // Do not try to claim anything but mobs (trusts, pets, players don't count)
-        (PDefender && PDefender->objtype == ENTITYTYPE::TYPE_MOB && PDefender->allegiance == ALLEGIANCE_TYPE::PLAYER)) // Added mobs that are in allied with player
-    {
+    if (PDefender == nullptr || (PDefender && PDefender->objtype != TYPE_MOB))
+    { // Do not try to claim anything but mobs (trusts, pets, players don't count)
+        return;
+    }
+
+    if (PDefender && PDefender->objtype == TYPE_MOB && PDefender->allegiance == PAttacker->allegiance)
+    { // mobs that are allied with the attacker do not need to be claimed and will not update enmity
         return;
     }
 
@@ -6236,13 +6303,13 @@ bool RemoveAmmo(CCharEntity* PChar, int quantity)
             charutils::UnequipItem(PChar, SLOT_AMMO);
             PChar->RequestPersist(CHAR_PERSIST::EQUIP);
             charutils::UpdateItem(PChar, loc, slot, -quantity);
-            PChar->pushPacket<GP_SERV_COMMAND_ITEM_SAME>();
+            PChar->pushPacket<GP_SERV_COMMAND_ITEM_SAME>(PChar);
             return true;
         }
         else
         {
             charutils::UpdateItem(PChar, PChar->equipLoc[SLOT_AMMO], PChar->equip[SLOT_AMMO], -quantity);
-            PChar->pushPacket<GP_SERV_COMMAND_ITEM_SAME>();
+            PChar->pushPacket<GP_SERV_COMMAND_ITEM_SAME>(PChar);
             return false;
         }
     }
