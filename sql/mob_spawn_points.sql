@@ -13016,9 +13016,9 @@ INSERT INTO `mob_spawn_points` VALUES (17010715,0,'Angler_Orobon','Angler Orobon
 INSERT INTO `mob_spawn_points` VALUES (17010717,0,'Angler_Orobon','Angler Orobon',8,80,80,220,-40.5,185,65);
 
 -- Quest: Puppetmaster Blues
-INSERT INTO `mob_spawn_points` VALUES (17010719,0,'Valkeng','Valkeng',16,60,60,0.000,0.000,0.000,0);
-INSERT INTO `mob_spawn_points` VALUES (17010720,0,'Valkeng','Valkeng',9,60,60,0.000,0.000,0.000,0);
-INSERT INTO `mob_spawn_points` VALUES (17010721,0,'Valkeng','Valkeng',9,60,60,0.000,0.000,0.000,0);
+INSERT INTO `mob_spawn_points` VALUES (17010719,0,'Valkeng','Valkeng',16,66,66,-180,39.5,185,65);
+INSERT INTO `mob_spawn_points` VALUES (17010720,0,'Valkeng','Valkeng',9,66,66,20,-0.5,185,65);
+INSERT INTO `mob_spawn_points` VALUES (17010721,0,'Valkeng','Valkeng',9,66,66,220,-40.5,185,65);
 
 -- Quest: Breaking the Bonds of Fate
 INSERT INTO `mob_spawn_points` VALUES (17010722,0,'Qultada','Qultada',10,70,70,-180,39.5,185,65);
