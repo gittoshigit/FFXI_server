@@ -52,6 +52,7 @@ auto Initialize(Scheduler& scheduler, MapConfig config) -> Task<void>;
 auto ProcessLoadQueue(Scheduler& scheduler, MapConfig config) -> Task<void>;
 
 auto IsLazyLoadingEnabled() -> bool;
+auto RequestZoneLoad(uint16 zoneId) -> bool;
 
 // TODO:
 // This shouldn't have side effects, it should be const and the caller should be responsible

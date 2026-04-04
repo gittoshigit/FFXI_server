@@ -880,6 +880,33 @@ auto IsLazyLoadingEnabled() -> bool
     return lazyLoad.enabled;
 }
 
+auto RequestZoneLoad(uint16 zoneId) -> bool
+{
+    if (GetZone(zoneId) || !lazyLoad.enabled)
+    {
+        return true;
+    }
+
+    if (!lazyLoad.managedZones.contains(zoneId))
+    {
+        return true;
+    }
+
+    auto pendingLoads = lazyLoad.loadQueue;
+    while (!pendingLoads.empty())
+    {
+        if (pendingLoads.front() == zoneId)
+        {
+            return false;
+        }
+
+        pendingLoads.pop();
+    }
+
+    lazyLoad.loadQueue.push(zoneId);
+    return false;
+}
+
 // Returns all zones managed by this process (ID and name)
 // - Lazy mode: queries database for zone names
 // - Immediate mode: uses already-loaded zone objects

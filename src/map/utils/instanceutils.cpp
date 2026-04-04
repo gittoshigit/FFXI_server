@@ -130,8 +130,9 @@ void CheckInstance()
         }
 
         auto instanceData = GetInstanceData(instanceId);
-        // Under --lazy, instance zones may not be loaded yet. Keep the request queued until ready.
-        if (!zoneutils::IsZoneReady(instanceData.instance_zone))
+        // Under --lazy, instance zones may not be loaded yet. Request the load and keep the
+        // instance request queued until the time server finishes loading that zone.
+        if (!zoneutils::RequestZoneLoad(instanceData.instance_zone))
         {
             return;
         }
