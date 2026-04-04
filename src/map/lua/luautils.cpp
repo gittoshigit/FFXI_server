@@ -21,16 +21,17 @@
 
 #include "luautils.h"
 
-#include "common/application.h"
-#include "common/filewatcher.h"
-#include "common/ipc.h"
-#include "common/lua.h"
-#include "common/logging.h"
-#include "common/settings.h"
-#include "common/timer.h"
-#include "common/utils.h"
-#include "common/vana_time.h"
-#include "common/version.h"
+#include <common/application.h>
+#include <common/filewatcher.h>
+#include <common/ipc.h>
+#include <common/lua.h>
+#include <common/logging.h>
+#include <common/settings.h>
+#include <common/timer.h>
+#include <common/types/maybe.h>
+#include <common/utils.h>
+#include <common/vana_time.h>
+#include <common/version.h>
 
 #include "lua_action.h"
 #include "lua_battlefield.h"
@@ -99,7 +100,6 @@
 #include <array>
 #include <filesystem>
 #include <numeric>
-#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -339,6 +339,7 @@ void init(IPP mapIPP, bool isRunningInCI)
     lua.set_function("GetSynergyRecipeByID", &luautils::GetSynergyRecipeByID);
     lua.set_function("GetSynergyRecipeByTrade", &luautils::GetSynergyRecipeByTrade);
     lua.set_function("ReloadSynthRecipes", &synthutils::LoadSynthRecipes);
+    lua.set_function("LoadExpDifficultyCurves", &luautils::LoadExpDifficultyCurves);
 
     // Fishing Contest Functions
     lua.set_function("GetFishingContest", &luautils::GetFishingContest);
@@ -1023,6 +1024,32 @@ void OnEntityLoad(CBaseEntity* PEntity)
     }
 }
 
+void LoadExpDifficultyCurves(const sol::table& expToDifficultyTable, const uint8 incrediblyEasyPreyLevel, const uint16 incrediblyEasyPreyMinExp)
+{
+    std::vector<std::pair<uint16, EMobDifficulty>> expDifficultyTable;
+
+    for (auto& [expObj, difficultyObj] : expToDifficultyTable)
+    {
+        uint16         exp        = expObj.as<uint16>();
+        EMobDifficulty difficulty = static_cast<EMobDifficulty>(difficultyObj.as<uint8>());
+
+        expDifficultyTable.emplace_back(exp, difficulty);
+    }
+
+    // Sort highest to lowest
+    std::sort(
+        expDifficultyTable.begin(),
+        expDifficultyTable.end(),
+        [](std::pair<uint16, EMobDifficulty> const& a, std::pair<uint16, EMobDifficulty> const& b)
+        {
+            return a.first > b.first;
+        });
+
+    std::pair<uint16, uint8> iep = { incrediblyEasyPreyMinExp, incrediblyEasyPreyLevel };
+
+    charutils::SetExpDifficultyCurve(expDifficultyTable, iep);
+}
+
 void PopulateIDLookups(uint16 zoneId, const std::string& zoneName)
 {
     TracyZoneScoped;
@@ -1070,7 +1097,7 @@ void PopulateIDLookups(uint16 zoneId, const std::string& zoneName)
 
     // Update GetFirstID to use this new lookup
     // clang-format off
-        lua.set_function("GetFirstID", [&](std::string const& name) -> std::optional<uint32>
+        lua.set_function("GetFirstID", [&](std::string const& name) -> Maybe<uint32>
         {
             if (lookup.find(name) != lookup.end())
             {
@@ -1148,7 +1175,7 @@ void PopulateIDLookups(uint16 zoneId, const std::string& zoneName)
             ShowWarning("GetFirstID is designed to be used at load/reload-time only!");
         });
 
-        lua.set_function("GetTableOfIDs", [&](std::string const& name, std::optional<int> optRange) -> void
+        lua.set_function("GetTableOfIDs", [&](std::string const& name, Maybe<int> optRange) -> void
         {
             ShowWarning("GetTableOfIDs is designed to be used at load/reload-time only!");
         });
@@ -1158,7 +1185,7 @@ void PopulateIDLookups(uint16 zoneId, const std::string& zoneName)
     lua["package"]["loaded"][fmt::format("scripts/zones/{}/IDs", zoneName)] = lua["zones"][zoneId];
 }
 
-void PopulateIDLookupsByFilename(std::optional<std::string> maybeFilename)
+void PopulateIDLookupsByFilename(Maybe<std::string> maybeFilename)
 {
     TracyZoneScoped;
 
@@ -1207,7 +1234,7 @@ void PopulateIDLookupsByFilename(std::optional<std::string> maybeFilename)
     // clang-format on
 }
 
-void PopulateIDLookupsByZone(std::optional<uint16> maybeZoneId)
+void PopulateIDLookupsByZone(Maybe<uint16> maybeZoneId)
 {
     TracyZoneScoped;
 
@@ -2904,7 +2931,7 @@ void OnSpellInterrupted(CBattleEntity* PCaster, CSpell* PSpell)
     }
 }
 
-std::tuple<std::optional<SpellID>, std::optional<CBattleEntity*>> OnMobSpellChoose(CBattleEntity* PCaster, CBattleEntity* PTarget, std::optional<SpellID> startingSpellId)
+std::tuple<Maybe<SpellID>, Maybe<CBattleEntity*>> OnMobSpellChoose(CBattleEntity* PCaster, CBattleEntity* PTarget, Maybe<SpellID> startingSpellId)
 {
     TracyZoneScoped;
 
@@ -2950,7 +2977,7 @@ std::tuple<std::optional<SpellID>, std::optional<CBattleEntity*>> OnMobSpellChoo
 
     uint32 newSpellId = result.get_type(0) == sol::type::number ? result.get<int32>(0) : 0;
 
-    std::tuple<std::optional<SpellID>, std::optional<CBattleEntity*>> retVal = {};
+    std::tuple<Maybe<SpellID>, Maybe<CBattleEntity*>> retVal = {};
 
     if (newSpellId > 0)
     {
@@ -3958,7 +3985,7 @@ CBattleEntity* OnMobSkillTarget(CBattleEntity* PTarget, CBaseEntity* PMob, CMobS
     return PTarget;
 }
 
-std::optional<timer::duration> OnMobSkillReadyTime(CBattleEntity* PTarget, CBaseEntity* PMob, CMobSkill* PMobSkill)
+Maybe<timer::duration> OnMobSkillReadyTime(CBattleEntity* PTarget, CBaseEntity* PMob, CMobSkill* PMobSkill)
 {
     TracyZoneScoped;
 
