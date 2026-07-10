@@ -52,7 +52,6 @@
 ## AI CLI 利用前提
 - この環境では `Claude Code CLI` と `Gemini CLI` を実行可能な相談手段として扱う。
 - 共通前提と基本ルールは [SESSION_CORE.md](/D:/program/workspace-meta/SESSION_CORE.md) の `環境前提` を参照する。
-- 再利用可能な相談手順はスキル `ai-cli-consult` を参照する。
 
 ## 継続性のルール
 - 作業単位が完了したら `state_compact.json` を更新する。

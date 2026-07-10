@@ -13,7 +13,7 @@
     "ブロッカー": []
   },
   "テンプレート情報": {
-    "テンプレート版": "2026-04-07",
+    "テンプレート版": "2026-06-22",
     "コピー後初期化要否": true
   },
   "実行管理": {
@@ -101,17 +101,24 @@
   },
   "ルール": {
     "入口ファイル": "PROJECT.md",
-    "常駐コア": [
-      "SESSION_CORE.md",
-      "AGENTS.md",
-      "state_compact.json"
+    "通常読込": [
+      "PROJECT.md",
+      "README.md",
+      "必要な対象ファイル"
     ],
     "条件付き読込": [
+      "state_compact.json",
       "RULES.md",
       "GLOBAL_ACTIVE.md",
       "AGENTS_DETAIL.md",
       "RULES_DETAIL.md",
       "GLOBAL_CHANGES.md"
+    ],
+    "状態更新条件": [
+      "長期作業の継続または再開",
+      "未完了、ブロッカー、再開事項",
+      "環境、設定、運用変更",
+      "別AIまたは別担当者への引き継ぎ"
     ]
   },
   "未解決事項": [

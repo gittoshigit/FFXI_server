@@ -1,7 +1,6 @@
-# RULES.md（プロジェクト固有ルール / Core）
+# RULES.md（プロジェクト固有ルール）
 
 ## プロジェクトの目的
--
 
 ---
 
@@ -18,83 +17,12 @@
 ---
 
 ## 禁止事項
-- 秘密情報を Git 管理ファイルへ書かない。
-- 承認なしに本番操作、削除、上書き、認証情報利用、外部公開設定変更を行わない。
-- `state_compact.json` を更新せずに状態を確定させない。
--
 
 ---
 
-## AI 役割分担
-- Codex:
-  分類、実装、環境検証、実機検証主導
-- Claude:
-  計画、設計、レビュー、静的検証
-- Gemini:
-  Web リサーチ、最新仕様確認
-- Human:
-  承認、最終判断、実機補助
-
-## 標準ワークフロー
-- 設計が必要なタスクは、原則として `Codex で設計作成 → Claude で設計レビュー → Codex で実装` の順で進める。
-- 軽微変更で設計不要と判断した場合を除き、設計レビュー前に実装へ進んではならない。
-- Claude レビューで `Must fix` または同等の重大指摘が出た場合、Codex は設計を更新してから再レビューまたは Human 判断へ進む。
-- 実装開始条件は、`docs/DESIGN.md` に設計内容が記入済みであり、Claude レビュー結果が確認済みであること。
-- 実装担当は原則 `Codex` とし、Claude には実装させずレビューに専念させる。
-
-## AI 相談ルール
-- Human から明示指示がなくても、タスク内容に応じて Codex が `Claude` または `Gemini` へ相談してよい。
-- 軽微で既知、かつ失敗時の巻き戻しが容易な作業は Codex 単独で進めてよく、相談は必要時のみ行う。
-- この環境では `Claude Code CLI` と `Gemini CLI` を利用可能な相談手段として扱ってよい。
-- `Claude Code CLI` の例:
-  `claude -p "...相談内容..."`
-- `Gemini CLI` の例:
-  `gemini -p "...相談内容..."`
-- `Claude` を使う条件:
-  計画整理、設計判断、方針比較、レビュー、静的観点の確認が必要なとき
-- `Gemini` を使う条件:
-  Web リサーチ、最新情報の確認、製品比較、公式仕様確認が必要なとき
-- 設計判断と最新仕様確認の両方が必要な場合は、原則として `Gemini` で最新情報を確認した後に `Claude` で判断整理する。
-- `Codex` を使う条件:
-  実装、設定変更、環境確認、実機検証、状態更新を主担当として進めるとき
-- 再利用可能な相談手順が必要な場合はスキル `ai-cli-consult` を使う。
-- 相談した場合は、原則として `state_compact.json` または調査成果物へ利用事実と要点を記録する。
-- AI 間で結論が矛盾した場合は、Codex が根拠を比較して暫定判断し、必要なら Human に確認する。
-- 設計タスクでは、Codex が `Claude Code CLI` を使って設計レビューを取得し、その要点を `docs/DESIGN.md` または `state_compact.json` に残すことを標準とする。
-
-## タスク分類の簡易表
-| 重さ | 条件 | 標準対応 |
-| --- | --- | --- |
-| 軽い | 既知範囲、小変更、低リスク | Codex 単独 |
-| 中くらい | 不確実性または検証負荷が中程度 | Codex + 必要な AI 1 つ |
-| 重い | 横断影響、設計変更、検証負荷が高い | 明示計画 + 複数 AI |
-
-## 状態管理
-- `state_compact.json` を主軸とする。
-- `current_status.md` は人間向けサマリーであり、常駐前提にしない。
-- `work_journal.md` は末尾のみ確認する。
-- 作業単位完了時は `state_compact.json` と必要に応じて `work_journal.md` を更新する。
-- 設定変更、障害対応、重要な決定や結果があれば `memory_data/projects/*.json` を更新する。
-
-## 必須成果物の最小ルール
-- 調査が必要:
-  `docs/RESEARCH.yaml`
-- 設計が必要:
-  `docs/DESIGN.md`
-- 実装した:
-  `docs/PATCH.yaml`
-- 検証した:
-  `docs/VERIFY.md`
-
-## フェーズゲート
-- `design` フェーズから `implementation` フェーズへ進む前に、`state_compact.json` に設計レビュー実施結果を記録する。
-- `implementation` フェーズ開始時は、`次のアクション` に実装対象を明記する。
-- 設計レビュー未実施、または重大指摘未解消のまま `実装承認=true` にしてはならない。
-
-## 詳細の参照先
-- docs の章立てや必須キー:
-  `RULES_DETAIL.md` またはスキル `workflow-docs-contract`
-- FAIL 時の戻し先と再実行詳細:
-  `RULES_DETAIL.md` またはスキル `workflow-fail-resolver`
-- コミット前確認:
-  スキル `workflow-commit-guard`
+## 共通ルール
+- タスク判断、レビュー、状態管理、フェーズゲートの共通ルールは
+  `D:\program\workspace-meta\PROJECT_COMMON_RULES.md` を正とする。
+- 安全・承認の最小ルールは
+  `D:\program\workspace-meta\AGENTS.md` を正とする。
+- 本ファイルには、このプロジェクト特有の内容だけを書く。
